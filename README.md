@@ -5,6 +5,7 @@
 
 We roughly follow an sklearn API. For example, for shallow PED from input dimensionality 50 to latent dimensionality 2
 
+    from model import DeepPED
     ped = DeepPED([50, 2])
     latents = ped.fit_transform(data)
     
