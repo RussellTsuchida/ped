@@ -15,11 +15,11 @@ import umap
 
 BATCH_SIZE_TRAIN    = 500
 DIST_TRUE           = 'relu'
-DIST_MODEL          = 'relu'
+DIST_MODEL          = DIST_TRUE
 NUM_EPOCHS_SUPERVISED   = 200 
 DIMS_TRUE           = [50, 2]
 DIMS_MODEL          = DIMS_TRUE
-if DIST_MODEL == 'relu':
+if DIST_MODEL == 'gauss':
     NUM_EPOCHS_UNSUPERVISED = 10 #10
     WEIGHT_DECAY    = 1.
     LAMBDA          = 1.
@@ -28,7 +28,6 @@ else:
     WEIGHT_DECAY    = 0.1 # 0.001
     LAMBDA          = 0.1
 BINOMIAL_N          = 10
-BASIS               = 'non-ortho'
 NUM_POINTS          = 100000 #10000
 SCRIPT_RUN_ID       = int(sys.argv[1])
 OUTPUT_DIR          = 'outputs/synthetic/' + DIST_TRUE + \
@@ -183,7 +182,7 @@ if PRETRAIN:
     ############################################### Fit PED then visualise
     print('Applying PED...')
     ped = DeepPED(DIMS_MODEL)
-    ped_z = ped.fit_transform(data_loader, lamb=LAMBDA, basis=BASIS,
+    ped_z = ped.fit_transform(data_loader, lamb=LAMBDA, 
         dist=DIST_MODEL, weight_decay=WEIGHT_DECAY, num_epochs=NUM_EPOCHS_UNSUPERVISED, 
         plot_bool=False, plot_freq=50, lr=LR, data_loader_test=data_loader_test)
     z3 = ped_z[:,2] if DIMS_MODEL[-1] == 3 else None
@@ -242,7 +241,7 @@ test_set = torch.utils.data.DataLoader(test_set_, BATCH_SIZE_TRAIN)
 
 ####################### PED Backbone network
 encoder = DeepEncoderLayerFC(DIMS_MODEL, lamb = LAMBDA,
-    act = DIST_MODEL, basis=BASIS)
+    act = DIST_MODEL)
 
 if PRETRAIN:
     backbone = ped.model

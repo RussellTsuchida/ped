@@ -10,14 +10,13 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class DeepEncoderLayerFC(nn.Module):
     def __init__(self, layer_widths, lamb = .1,
-        act = 'bernoulli', basis='non-ortho',
+        act = 'bernoulli', 
         dropout_mode = 'from_latents'):
         """
         layer_widths (list(int)): [input_dim, width1, ..., widthL-1, output_dim]
         """ 
         super().__init__()
         self.layer_widths = layer_widths
-        self.mode = basis
         self.fc_or_conv = 'fc'
         self.dropout_mode = dropout_mode
         #self.dropout_mode = 'off'
@@ -257,7 +256,7 @@ class DeepPED(object):
                 param.requires_grad = bool_
             self.encoder.biases[l].requires_grad = bool_
         
-    def fit(self, data_loader, lamb=1, basis='non-ortho',
+    def fit(self, data_loader, lamb=1,
         dist='bernoulli', weight_decay=0.001, num_epochs=20,
         plot_bool=False, plot_freq=5, lr=0.01):
         features, label = next(iter(data_loader))
@@ -268,7 +267,7 @@ class DeepPED(object):
 
         # Initialise the model
         self.encoder = DeepEncoderLayerFC(self.layer_widths, 
-            basis=basis, act=dist, lamb=lamb)
+            act=dist, lamb=lamb)
         self.encoder.to(device)
 
         self.model = DeepDEQAutoencoder(self.encoder)
@@ -298,10 +297,10 @@ class DeepPED(object):
             if plot_bool and (epoch % plot_freq) == 0:
                 self._test(epoch, data_loader, plot_bool=plot_bool)
 
-    def fit_transform(self, data_loader, lamb=1, basis='non-ortho',
+    def fit_transform(self, data_loader, lamb=1,
         dist='bernoulli', weight_decay=0.001, num_epochs=20, plot_bool=True,
         plot_freq = 10, lr=0.01, data_loader_test=None, layer_out = -1):
-        self.fit(data_loader, lamb, basis, dist, weight_decay, num_epochs,
+        self.fit(data_loader, lamb, dist, weight_decay, num_epochs,
             plot_bool, plot_freq, lr=lr)
         if data_loader_test is None:
             data_loader_test = data_loader
