@@ -32,4 +32,4 @@ We provide a script called `script_synthetic.py`, which includes all the code re
     DIST_TRUE = ... # 'relu' or 'poisson' or 'gauss' or 'bernoulli'
     DIMS_TRUE = ... #[50, 2] or [50, 30, 2] or [50, 30, 15, 2]
     
-There are some other globals there to play with as well, if you wish. You will need to run each setting 100 times, the execution of which is system dependent (e.g. with a job manager) and left up to the user.
+There are some other globals there to play with as well, if you wish. You will need to run each setting 100 times, the execution of which is system dependent (e.g. with a job manager) and left up to the user. An example for a system using SLURM is provided, see `synthetic_run_all.sh` and `synthetic_run.sh`.
