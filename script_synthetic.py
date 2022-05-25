@@ -12,20 +12,22 @@ from model import DeepEncoderLayerFC
 import sys
 import os
 import umap
+import time
 
 BATCH_SIZE_TRAIN    = 500
 DIST_TRUE           = 'relu'
 DIST_MODEL          = DIST_TRUE
-NUM_EPOCHS_SUPERVISED   = 200 
+NUM_EPOCHS_SUPERVISED   = 100 
 DIMS_TRUE           = [50, 2]
 DIMS_MODEL          = DIMS_TRUE
-if DIST_MODEL == 'gauss':
-    NUM_EPOCHS_UNSUPERVISED = 10 #10
-    WEIGHT_DECAY    = 1.
+if len(DIMS_TRUE) > 2:
+    NUM_EPOCHS_UNSUPERVISED = 10
+else:
+    NUM_EPOCHS_UNSUPERVISED = 30
+WEIGHT_DECAY        = 10.*(len(DIMS_MODEL)-1)
+if (DIST_MODEL == 'relu') or (DIST_MODEL == 'poisson'): 
     LAMBDA          = 1.
 else:
-    NUM_EPOCHS_UNSUPERVISED = 10
-    WEIGHT_DECAY    = 0.1 # 0.001
     LAMBDA          = 0.1
 BINOMIAL_N          = 10
 NUM_POINTS          = 100000 #10000
@@ -86,7 +88,6 @@ def generate_data(num_points, batch_size, dims, shape):
     elif shape == 'shape':
         z, labels = _generate_shape(num_points)
 
-    #labels = np.zeros((10000,))
     dims = dims[::-1]
     z_in = np.copy(z)
     for dim_idx in range(len(dims)-1):
@@ -105,10 +106,11 @@ def generate_data(num_points, batch_size, dims, shape):
             p = 1/(1+np.exp(-eta))
             Y = np.random.binomial(BINOMIAL_N, p)
         if (DIST_TRUE == 'poisson'):
-            lam = np.exp(eta)
+            lam = np.exp(eta*0.5)
             Y = np.random.poisson(lam)
         if DIST_TRUE == 'gauss':
-            Y = np.random.normal(eta, scale=1/np.sqrt(LAMBDA)*np.ones_like(eta))
+            Y = np.random.normal(eta/np.sqrt(LAMBDA), 
+                scale=1/np.sqrt(LAMBDA)*np.ones_like(eta))
         if DIST_TRUE == 'cauchy':
             eta = (eta > 0) * eta
             Y = np.random.standard_cauchy(\
@@ -161,30 +163,38 @@ if PRETRAIN:
     #################################################### Fit TSNE then visualise
     """
     print('Applying tSNE...')
+    t0 = time.time()
     tsne_z = TSNE(n_components=DIMS_MODEL[-1], learning_rate='auto',
         init='pca').fit_transform(true_Y)
+    print('Took ' + str(time.time() - t0) + ' seconds.')
     z3 = tsne_z[:,2] if DIMS_MODEL[-1] == 3 else None
     plot_z_space(tsne_z[:,0], tsne_z[:,1], z3, true_labels.numpy(), 'tsne' + SHAPE)
     """
     #################################################### Fit UMAP then visualise
     print('Applying UMAP...')
+    t0 = time.time()
     umap_z = umap.UMAP().fit_transform(true_Y)
+    print('Took ' + str(time.time() - t0) + ' seconds.')
     z3 = umap_z[:,2] if DIMS_MODEL[-1] == 3 else None
     plot_z_space(umap_z[:,0], umap_z[:,1], z3, true_labels.numpy(), 'umap' + SHAPE)
     #################################################### Fit PCA then visualise
     print('Applying PCA...')
+    t0 = time.time()
     scaler = StandardScaler()
     data_scaled = scaler.fit_transform(true_Y.numpy())
     pca_z = PCA(n_components=DIMS_MODEL[-1]).fit_transform(data_scaled)
+    print('Took ' + str(time.time() - t0) + ' seconds.')
     z3 = pca_z[:,2] if DIMS_MODEL[-1] == 3 else None
     plot_z_space(pca_z[:,0], pca_z[:,1], z3, true_labels.numpy(), 'pca' + SHAPE)
 
     ############################################### Fit PED then visualise
     print('Applying PED...')
+    t0 = time.time()
     ped = DeepPED(DIMS_MODEL)
     ped_z = ped.fit_transform(data_loader, lamb=LAMBDA, 
         dist=DIST_MODEL, weight_decay=WEIGHT_DECAY, num_epochs=NUM_EPOCHS_UNSUPERVISED, 
         plot_bool=False, plot_freq=50, lr=LR, data_loader_test=data_loader_test)
+    print('Took ' + str(time.time() - t0) + ' seconds.')
     z3 = ped_z[:,2] if DIMS_MODEL[-1] == 3 else None
     plot_z_space(ped_z[:,0], ped_z[:,1], z3, true_labels.numpy(), 'ped' + SHAPE)
 

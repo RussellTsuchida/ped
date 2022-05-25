@@ -19,8 +19,8 @@ class DeepEncoderLayerFC(nn.Module):
         self.layer_widths = layer_widths
         self.fc_or_conv = 'fc'
         self.dropout_mode = dropout_mode
-        #self.dropout_mode = 'off'
 
+        self.act_str = act
         self._init_params()
 
         self.lamb = lamb
@@ -40,7 +40,7 @@ class DeepEncoderLayerFC(nn.Module):
             self.T = lambda x: np.sqrt(self.lamb)*x
         elif act == 'poisson':
             self.act = torch.exp
-        self.act_str = act
+
 
         self.output_dim = np.sum(self.layer_widths[1:])
 
@@ -52,11 +52,10 @@ class DeepEncoderLayerFC(nn.Module):
             in_dim = self.layer_widths[l]
             out_dim = self.layer_widths[l+1]
             M_layer = nn.Linear(in_dim, out_dim, bias = False)
-
-            #M_layer.weight = nn.Parameter(M_layer.weight*0.1) # This is actually W.T in
-            # the paper
-            nn.init.normal_(M_layer.weight, 0, 1/np.sqrt(in_dim))
-            #M_layer.weight = nn.Parameter(M_layer.weight)
+            if (self.act_str == 'poisson'):
+                nn.init.normal_(M_layer.weight, 0, 0.1/np.sqrt(out_dim))
+            else:
+                nn.init.normal_(M_layer.weight, 0, 1/np.sqrt(in_dim))
 
             # Initialise biases
             bias = torch.empty(in_dim).to(device)
@@ -178,7 +177,7 @@ class ExpfamLoss(nn.Module):
             total_err = total_err + \
                 self.lamb*torch.linalg.norm(zl, ord='fro')**2*factor**l
             total_num = total_num + torch.numel(zlm1)
-            return total_err/1000
+            return total_err/(zlm1.shape[0]*2)
 
 class DeepDEQAutoencoder(nn.Module):
     def __init__(self, encoder, backbone = False):
@@ -190,15 +189,11 @@ class DeepDEQAutoencoder(nn.Module):
     def forward(self, Y):
         thres = 50
         f0 = torch.zeros((Y.shape[0], int(np.prod(self.f.output_dim))), device=Y.device)
-        #f0 = torch.tensor(\
-        #    np.random.normal(size=(Y.shape[0], int(np.prod(self.f.output_dim)))), 
-        #    device=Y.device, dtype=Y.dtype)
 
         # Forward pass
         with torch.no_grad():
             f_star = self.solver(\
                 lambda f: self.f(f, Y), f0, threshold=thres)['result']
-            #f_star = f_star.reshape([-1] + self.f.output_dim)
             new_f_star = f_star
 
         # (Prepare for) Backward pass
@@ -251,7 +246,7 @@ class DeepPED(object):
     def _freeze_unfreeze(self, epoch):
         L = len(self.encoder.M_layers)-2
         for l in range(1, L+1):
-            bool_ = (epoch >= 10*(l-1))
+            bool_ = (epoch >= 5*(l-1))
             for param in self.encoder.M_layers[l].parameters():
                 param.requires_grad = bool_
             self.encoder.biases[l].requires_grad = bool_
@@ -280,11 +275,11 @@ class DeepPED(object):
             params_ = params_ + [{'params': self.encoder.M_layers[l].parameters(),
                                 'weight_decay': (self.layer_widths[l] +\
                                 self.layer_widths[l-1])*weight_decay/1000}]
+            # Divide the weight decay by 1000 for reasonable units 
+            # (Note this also occurs in the loss ExpfamLoss)
             params_ = params_ + [{'params': self.encoder.biases[l]}]
         
         self.optimiser = torch.optim.Adam(params_, lr=lr)
-        #self.optimiser = torch.optim.SGD(self.model.parameters(), lr=lr,
-        #    weight_decay=weight_decay)
 
         self.loss = ExpfamLoss(dist, lamb=lamb)
 
@@ -292,7 +287,7 @@ class DeepPED(object):
             print(epoch, flush=True)
             #if epoch > 3:
             #    self.model.f.dropout_mode = 'from_latents'
-            #self._freeze_unfreeze(epoch)
+            self._freeze_unfreeze(epoch)
             self._train(epoch, data_loader)
             if plot_bool and (epoch % plot_freq) == 0:
                 self._test(epoch, data_loader, plot_bool=plot_bool)
@@ -320,8 +315,6 @@ class DeepPED(object):
         print(loss_eval.item(), flush=True)
         _, R = torch.qr(self.model.f.M_layers[-2].weight.T)
         print(R)
-        #_, R = torch.qr(self.model.f.M_layers[-3].weight.T)
-        #print(R)
         for i in range(1, len(self.model.f.M_layers)-1):
             W = self.encoder.M_layers[i].weight.T
             print(torch.linalg.norm(W @ W.T, ord=2)/self.encoder.lamb)
