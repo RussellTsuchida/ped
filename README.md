@@ -1,9 +1,9 @@
-# Principal Equilibrium Dimensions
-*Code to accompany the paper titled "Principal equilibrium dimensions"*
+# Exponential family PCA using DEQs
+*Code to accompany the paper titled "When are equilibrium networks scoring algorithms?"*
 
 ## Basic Usage
 
-We roughly follow an sklearn API. For example, for shallow PED from input dimensionality 50 to latent dimensionality 2
+We roughly follow an sklearn API. For example, from input dimensionality 50 to latent dimensionality 2
 
     from model import DeepPED
     ped = DeepPED([50, 2])
@@ -13,9 +13,7 @@ Here `data` is a Pytorch `torch.utils.data.DataLoader`.
 
 ## Hyperparameters
 
-All hyperparameters are set in the `fit` or `fit_transform` method, except for the layer widths, which are set at initialisation. For deep PED with 50 dimensional inputs and hierarchical latents of size 30, 15, 2,
-
-     ped = DeepPED([50, 30, 15, 2])
+All hyperparameters are set in the `fit` or `fit_transform` method, except for the layer widths, which are set at initialisation. 
      
 Available keyword hyperparameters are
 * `lamb` strictly positive float, which is the lambda in the paper. For implementation, all lambda in each layer is equal.
@@ -30,7 +28,7 @@ Available keyword hyperparameters are
 ## Reproducing the results from the paper
 We provide a script called `script_synthetic.py`, which includes all the code required to reproduce the results reported in the paper. Each time this script is run, it completes one run of one of the rows in table 4 (of which 100 are reported in the paper). In order to reproduce results, modify the following global variables as desired
 
-    DIST_TRUE = ... # 'relu' or 'poisson' or 'gauss' or 'bernoulli'
-    DIMS_TRUE = ... #[50, 2] or [50, 30, 2] or [50, 30, 15, 2]
+    DIST_TRUE = ... #  'poisson' or 'gauss' or 'bernoulli'
+    DIMS_TRUE = ... #[50, 2]
     
 There are some other globals there to play with as well, if you wish. You will need to run each setting 100 times, the execution of which is system dependent (e.g. with a job manager) and left up to the user. An example for a system using SLURM is provided, see `synthetic_run_all.sh` and `synthetic_run.sh`.
