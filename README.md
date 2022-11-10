@@ -1,5 +1,5 @@
 # Exponential family PCA using DEQs
-*Code to accompany the paper titled "When are equilibrium networks scoring algorithms?"*
+*Code to accompany the paper titled "When are equilibrium networks scoring algorithms?" and "Deep equilibrium models as estimators for continuous latent variables"*
 
 ## Basic Usage
 
